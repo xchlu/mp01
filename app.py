@@ -2,6 +2,7 @@ from shinywidgets import render_plotly
 from shiny.ui import page_navbar
 from functools import partial
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from shiny import reactive, render, req
 from shiny.express import input, ui
 import pandas as pd;
@@ -65,17 +66,32 @@ with ui.sidebar(bg="#f8f8f8", width=400):
 
 
 
-with ui.navset_card_tab(id="tab"):  
+  
+with ui.navset_pill(id="tab"): 
     with ui.nav_panel("Historical"):
         @render.plot(alt="A scatterplot of the lowest temperature over time")  
         def plot():  
-            df = coordinate
             
+            coordinate,_ = process_data.get_weather_data(latitude=cities.at[int(input.city()),"lat"], longitude=cities.at[int(input.city()),"lng"], start_date=input.daterange()[0], end_date=input.daterange()[1], temperature_unit="fahrenheit" if input.units() == "1" else "celsius")
+            
+            df = coordinate
+            df['date'] = pd.to_datetime(df['date'])
             fig, ax = plt.subplots()
-            ax.hist(mass, input.n(), density=True)
-            ax.set_title("Palmer Penguin Masses")
-            ax.set_xlabel("Mass (g)")
-            ax.set_ylabel("Density")
+            threshold = input.plot_temp()
+            plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+            if "Weekly Rolling Average" in input.time():
+                weekly_rolling = df['temperature_2m'].rolling(window=7).mean()
+                ax.plot(df['date'], weekly_rolling, color='orange')
+            if "Monthly Rolling Average" in input.time():
+                monthly_rolling = df['temperature_2m'].rolling(window=30).mean()
+                ax.plot(df['date'], monthly_rolling, color='blue')
+            # set those points which are below the temperature to be transparent
+            colors = ['grey' if temp < threshold else 'black' for temp in df['temperature_2m']]
+            alpha = [0.5 if temp < threshold else 1 for temp in df['temperature_2m']]
+            ax.scatter(df['date'], df['temperature_2m'], c=colors, alpha=alpha, s=15)            
+            plt.axhline(y=threshold, color='grey', linestyle='-',alpha=0.5)
+            y_label = "Daily Minimum Temperature °F" if input.units() == "1" else "Daily Minimum Temperature °C"
+            ax.set_ylabel(y_label)
 
             return fig  
         
@@ -87,7 +103,6 @@ with ui.navset_card_tab(id="tab"):
         def temperature_table():
             # Calculate the temperature and days below the temperature
             # check out the column names of the dataframe
-            print(coordinate)
             
             min = input.slider()[0]
             max = input.slider()[1]
@@ -100,7 +115,7 @@ with ui.navset_card_tab(id="tab"):
                 results.append({'Temp': temp,'Days Below':below.sum(),
                     'Proportion Below': proportion_of_below})
             df = pd.DataFrame(results)
-            return render.DataGrid(df)
+            return render.DataGrid(df, row_selection_mode='multiple', width= '100%', height='auto', summary='')
     with ui.nav_panel("Forcast"):
         "Panel B content"
 

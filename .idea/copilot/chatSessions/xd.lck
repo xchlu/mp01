@@ -1,4 +1,4 @@
-Private property of Exodus: 82289@LuCHANGdeMacBook-Air.local
+Private property of Exodus: 60539@wirelessprv-10-194-129-35.near.illinois.edu
 
 jetbrains.exodus.io.LockingManager.lock(LockingManager.kt:88)
 jetbrains.exodus.io.LockingManager.lock(LockingManager.kt:39)
@@ -28,7 +28,7 @@ com.github.copilot.chat.window.CopilotChatToolWindow$initCopilotStatusListener$1
 com.github.copilot.chat.window.CopilotChatToolWindow$initCopilotStatusListener$1.invoke(CopilotChatToolWindow.kt:115)
 com.github.copilot.status.CopilotAuthStatusKt.subscribeToCopilotAuthStatus$lambda$0(CopilotAuthStatus.kt:44)
 com.intellij.util.messages.impl.MessageBusImplKt.invokeMethod(MessageBusImpl.kt:700)
-com.intellij.util.messages.impl.MessageBusImplKt.invokeListener(MessageBusImpl.kt:660)
+com.intellij.util.messages.impl.MessageBusImplKt.invokeListener(MessageBusImpl.kt:664)
 com.intellij.util.messages.impl.MessageBusImplKt.deliverMessage(MessageBusImpl.kt:423)
 com.intellij.util.messages.impl.MessageBusImplKt.pumpWaiting(MessageBusImpl.kt:402)
 com.intellij.util.messages.impl.MessageBusImplKt.access$pumpWaiting(MessageBusImpl.kt:1)
