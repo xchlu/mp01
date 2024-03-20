@@ -3,12 +3,14 @@ from shiny.ui import page_navbar
 from functools import partial
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from matplotlib.ticker import MultipleLocator
 from shiny import reactive, render, req
 from shiny.express import input, ui
 import pandas as pd;
 from ipyleaflet import Map  
 from shiny.express import ui
 from shinywidgets import render_widget  
+from prophet import Prophet
 import process_data
 
 # Load data and compute static values
@@ -36,7 +38,7 @@ with ui.sidebar(bg="#f8f8f8", width=400):
     ui.input_radio_buttons(  
         "trend",  
         "Forecast Trend",  
-        {"1": "Flat", "2": "Linear"} 
+        {"flat": "Flat", "linear": "Linear"},selected="flat"
     )  
 
     ui.input_radio_buttons(  
@@ -92,6 +94,9 @@ with ui.navset_pill(id="tab"):
             plt.axhline(y=threshold, color='grey', linestyle='-',alpha=0.5)
             y_label = "Daily Minimum Temperature °F" if input.units() == "1" else "Daily Minimum Temperature °C"
             ax.set_ylabel(y_label)
+            ax.yaxis.set_major_locator(MultipleLocator(base=25)) 
+            plt.grid()
+
 
             return fig  
         
@@ -117,7 +122,51 @@ with ui.navset_pill(id="tab"):
             df = pd.DataFrame(results)
             return render.DataGrid(df, row_selection_mode='multiple', width= '100%', height='auto', summary='')
     with ui.nav_panel("Forcast"):
-        "Panel B content"
+        @render.plot(alt="A forcast scatterplot of the lowest temperature over time")  
+        def forecast():
+            # get the forecast data
+            coordinate,_ = process_data.get_weather_data(latitude=cities.at[int(input.city()),"lat"], longitude=cities.at[int(input.city()),"lng"], start_date=input.daterange()[0], end_date=input.daterange()[1], temperature_unit="fahrenheit" if input.units() == "1" else "celsius")
+            df = coordinate
+            df['date'] = pd.to_datetime(df['date']).dt.tz_localize(None)
+            model = Prophet(growth=input.trend())
+            df_prophet = df.rename(columns={"date": "ds", "temperature_2m": "y"})
+            model.fit(df_prophet)
+            future = model.make_future_dataframe(periods=365*int(input.numeric()))
+            global forecast
+            forecast = model.predict(future)
+            last_date = df_prophet['ds'].max()
+
+            forecast_future = forecast[forecast['ds'] > last_date]
+            fig = model.plot(forecast_future)
+            threshold = input.plot_temp()
+            fig.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+
+            # set those points which are below the temperature to be transparent
+            plt.axhline(y=threshold, color='grey', linestyle='-',alpha=0.5)
+            y_label = "Daily Minimum Temperature °F" if input.units() == "1" else "Daily Minimum Temperature °C"
+            # set the y label
+            fig.gca().set_ylabel(y_label)
+
+            return fig
+        @render.data_frame
+        def forcast_temperature_table():
+            # reactive when the forecast is generated
+            trend = input.trend()
+            df = forecast
+            min = input.slider()[0]
+            max = input.slider()[1]
+            temp_range = range(max, min-1, -1)
+            results = []
+            for temp in temp_range:
+                # get the temperature and days below the temperature
+                below = df["yhat_lower"] < temp
+                proportion_of_below = below.mean().round(3)
+                
+                results.append({'Temp': temp,'Days Below':below.sum(),
+                    'Proportion Below': proportion_of_below})
+            df = pd.DataFrame(results)
+            return render.DataGrid(df, row_selection_mode='multiple', width= '100%', height='auto', summary='')
+
 
     with ui.nav_panel("About"):
         "his is some text!"
