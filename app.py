@@ -19,9 +19,14 @@ cities = pd.read_csv("data/cities.csv")
 # Add page title and sidebar
 ui.page_opts(title="Daily Heat Pump Efficiency Counter", fillable=True)
 with ui.sidebar(bg="#f8f8f8", width=400):  
-    # Add selectizeInput,defualt value is New York
-    ui.input_selectize("city", "City", choices=cities["city_state"])
-    # print the lat, lng of the selected city
+    # set the selected value to be Urbana, Illiois
+    
+    condition = cities['city_state'] == "Urbana, Illinois"
+    urbana = cities[condition].index[0].item()
+    
+    ui.input_selectize("city", "City", choices=cities["city_state"], selected=urbana, width="100%")
+    
+    # print the lat, lng of the selected city]
     # make it inline and at the middle within the sidebar
     @render.text(inline=True)  
     def text():
