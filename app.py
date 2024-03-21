@@ -7,7 +7,7 @@ from matplotlib.ticker import MultipleLocator
 from shiny import reactive, render, req
 from shiny.express import input, ui
 import pandas as pd;
-from ipyleaflet import Map  
+from ipyleaflet import Map, Marker  
 from shiny.express import ui
 from shinywidgets import render_widget  
 from prophet import Prophet
@@ -26,8 +26,6 @@ with ui.sidebar(bg="#f8f8f8", width=400):
     
     ui.input_selectize("city", "City", choices=cities["city_state"], selected=urbana, width="100%")
     
-    # print the lat, lng of the selected city]
-    # make it inline and at the middle within the sidebar
     @render.text(inline=True)  
     def text():
         # return the lat, lng of the selected city
@@ -35,9 +33,10 @@ with ui.sidebar(bg="#f8f8f8", width=400):
         # lat_lng = ', '.join(map(str, cities.iloc[int(city)][["lat", "lng"]].values))
         # transform the lat, lng to a String without the brackets
         global coordinate
+        global lat_lng
         coordinate, lat_lng  = process_data.get_weather_data(latitude=cities.at[int(city),"lat"], longitude=cities.at[int(city),"lng"], start_date=input.daterange()[0], end_date=input.daterange()[1], temperature_unit="fahrenheit" if input.units() == "1" else "celsius")
-
-        return lat_lng[12:]
+        lat_lng = lat_lng[12:]
+        return lat_lng
     ui.input_date_range("daterange", "Dates", min="2020-01-01" , max="2024-01-01", start="2022-01-01", end="2024-01-01") 
     ui.input_numeric("numeric", "Years to Forecast", 1, min=1, max=5)  
     ui.input_radio_buttons(  
@@ -66,10 +65,14 @@ with ui.sidebar(bg="#f8f8f8", width=400):
     
     @render_widget  
     def map():
-        city = input.city()
-        # get the lat, lng of the selected city
-        lat_lng = cities.iloc[int(city)][["lat", "lng"]].values.tolist()
-        return Map(center=lat_lng, zoom=10) 
+        latlng = lat_lng.split(" ")
+        lat = str(latlng[0][:-2])
+        lng = str(latlng[1][:-2])
+        # print(lat, lng)
+        point = Marker(location=(lat, lng), draggable=False)  
+        map = Map(center=(lat, lng), zoom=12)
+        map.add_layer(point)
+        return map
 
 
 
@@ -133,12 +136,15 @@ with ui.navset_pill(id="tab"):
             coordinate,_ = process_data.get_weather_data(latitude=cities.at[int(input.city()),"lat"], longitude=cities.at[int(input.city()),"lng"], start_date=input.daterange()[0], end_date=input.daterange()[1], temperature_unit="fahrenheit" if input.units() == "1" else "celsius")
             df = coordinate
             df['date'] = pd.to_datetime(df['date']).dt.tz_localize(None)
+            
+            
             model = Prophet(growth=input.trend())
             df_prophet = df.rename(columns={"date": "ds", "temperature_2m": "y"})
             model.fit(df_prophet)
             future = model.make_future_dataframe(periods=365*int(input.numeric()))
             global forecast
             forecast = model.predict(future)
+            
             last_date = df_prophet['ds'].max()
 
             forecast_future = forecast[forecast['ds'] > last_date]
@@ -174,4 +180,39 @@ with ui.navset_pill(id="tab"):
 
 
     with ui.nav_panel("About"):
-        "his is some text!"
+        ui.markdown(
+            """
+            # About this application
+            ## Context
+            This is an application designed for potential heat pump customers to
+            make informed decisions on their choices. As the efficacy of heap pump is
+            affected by temperature, it is important for customers to check munufacturers'
+            performance specifications and learn if the heat pump works well in extremely
+            cold environments.
+
+            This applicaiton provides users with historical daily minimum temperature data (a plot and a table) from 
+            cities in the whole United States. Additionally, you are able to access forecast data
+            up to **five years**. Hope this will help you decide which heat pump suits you best,
+            or maybe get a furnace.
+
+            ## Usage instructions
+            There is a sidebar on the left for you to set the options. You can select your city, 
+            the date range of data you want to get, how many years you want to predict,
+            the trend of forecast model, and options for plot and table. You will also
+            see a map showing your location. 
+
+            There are three navigation bar on the right of the side bar. As the name suggests,
+            the 'Historical' section shows a plot and a table for historical data, while 'the Forecast' section
+            shows a plot and a table for forecast data. The 'About' section is what you are 
+            seeing at this moment.
+            
+
+            ## Citation
+            Location data source: This application is using the free tier US cities data 
+            from [Simple Maps](https://simplemaps.com/data/us-cities).
+
+            Weather data source: Our weather data is from [Open-Meteo](https://open-meteo.com/) 
+            and their[Historical Weather API](https://open-meteo.com/en/docs/historical-weather-api).
+            """
+)
+
