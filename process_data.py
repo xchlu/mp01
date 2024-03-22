@@ -4,7 +4,6 @@ import requests_cache
 import pandas as pd
 from retry_requests import retry
 
-# parse the parameters
 
 def get_weather_data(**kwargs ):
     # parse the parameters
@@ -35,7 +34,8 @@ def get_weather_data(**kwargs ):
     
     daily = response.Daily()
     daily_temperature_2m = daily.Variables(0).ValuesAsNumpy()
-
+    
+    # this part is copied from the Open-Meteo API documentation
     daily_data = {"date": pd.date_range(
         start = pd.to_datetime(daily.Time(), unit = "s", utc = True),
         end = pd.to_datetime(daily.TimeEnd(), unit = "s", utc = True),
