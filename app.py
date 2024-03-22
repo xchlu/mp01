@@ -13,7 +13,7 @@ from shinywidgets import render_widget
 from prophet import Prophet
 import process_data
 
-# Load data and compute static values
+# Load data
 cities = pd.read_csv("data/cities.csv")
 
 # Add page title and sidebar
@@ -110,7 +110,7 @@ with ui.navset_pill(id="tab"):
         
         
         
-        # for coordinates data, generate a form including a table which have Temperature and Days below the temperature and proportion of days below the temperature
+        # (copilot assisted, but not all accepted) for coordinates data, generate a form including a table which have Temperature and Days below the temperature and proportion of days below the temperature
         
         @render.data_frame
         def temperature_table():
@@ -129,6 +129,7 @@ with ui.navset_pill(id="tab"):
                     'Proportion Below': proportion_of_below})
             df = pd.DataFrame(results)
             return render.DataGrid(df, row_selection_mode='multiple', width= '100%', height='auto', summary='')
+        
     with ui.nav_panel("Forcast"):
         @render.plot(alt="A forcast scatterplot of the lowest temperature over time")  
         def forecast():
@@ -138,7 +139,7 @@ with ui.navset_pill(id="tab"):
             df['date'] = pd.to_datetime(df['date']).dt.tz_localize(None)
             
             
-            model = Prophet(growth=input.trend())
+            model = Prophet(growth=input.trend(), interval_width= 0.95)
             df_prophet = df.rename(columns={"date": "ds", "temperature_2m": "y"})
             model.fit(df_prophet)
             future = model.make_future_dataframe(periods=365*int(input.numeric()))
