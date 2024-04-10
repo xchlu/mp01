@@ -9,7 +9,5 @@ __pycache__/
 
 # macOS
 .DS_Store
-.idea/copilot/chatSessions/00000000000.xd
-.idea/copilot/chatSessions/xd.lck
-.idea/heatpump-dashboard.iml
-.idea/workspace.xml
+
+.idea
